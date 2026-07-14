@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI 视觉设计 / POLAN</title><link rel="stylesheet" href="styles.css"><style>
+.ai-scene{position:relative;min-height:500px;border:1px solid var(--border);background:var(--bg) url("assets/ai-text-generated.png") center/cover no-repeat;overflow:hidden}
+.ai-scene img{display:block;width:100%;height:100%;min-height:500px;object-fit:cover}
+.ai-scene-label{position:absolute;left:18px;top:18px;color:var(--muted);font:11px var(--font-mono);letter-spacing:.12em;pointer-events:none}
+.ai-scene-status{position:absolute;right:18px;bottom:18px;color:var(--accent);font:11px var(--font-mono);letter-spacing:.08em;pointer-events:none}
+@media(max-width:640px){.ai-scene,.ai-scene img{min-height:320px}}
+.ai-scene canvas{display:none}
+.ai-scene-controls,.ai-scene-fallback{display:none!important}
+</style></head>
+<body>
+<div class="crosshair" aria-hidden="true"><i class="crosshair-dot"></i></div>
+<div class="page">
+  <header class="topbar" data-od-id="topbar"><a class="brand" href="index.html">POLAN</a><nav class="topnav"><a href="index.html#works">作品分类</a><a href="index.html#method">设计方法</a><a href="index.html#contact">联系</a></nav><span>18 / 18</span></header>
+  <main>
+    <section class="detail-hero" data-od-id="detail-hero"><div><p class="kicker">18 / AI VISUAL</p><h1>AI 视觉设计<span>占位</span></h1></div><div class="detail-copy"><span class="meta">内容状态 / 等待整理</span><p>此分类页面已经建立。具体案例、图像、动效与项目说明将在资料整理完成后替换灰色占位。</p></div></section>
+    <section data-od-id="placeholder-content"><div class="placeholder-grid"><div class="ai-scene" data-od-id="ai-webgl-scene"><canvas id="ai-canvas" aria-label="AI 视觉设计三维字符核心"></canvas><div class="ai-scene-label">生成轨道 / 字符采样</div><div class="ai-scene-controls"><button id="ai-reset" type="button">重置视角</button><button id="ai-toggle" type="button">暂停旋转</button></div><div class="ai-scene-status" id="ai-status">WEBGL / READY</div><div class="ai-scene-fallback" id="ai-fallback">三维场景不可用 / 灰色占位</div></div><div class="placeholder" aria-label="AI 视觉设计具体内容图片占位"></div></div></section>
+  </main>
+  <footer class="detail-footer" data-od-id="detail-footer"><a href="category-data.html">← 上一个分类</a><a href="index.html#works">返回全部分类</a><a href="index.html">下一个分类 →</a></footer>
+</div>
+<script>
+const root=document.documentElement;
+addEventListener('pointermove',e=>{root.style.setProperty('--cx',e.clientX+'px');root.style.setProperty('--cy',e.clientY+'px')});
+addEventListener('keydown',e=>{if(e.key==='Escape') location.href='index.html'});
+</script>
+<script type="application/disabled" src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+(() => { return;
+  const canvas = document.getElementById('ai-canvas');
+  const fallback = document.getElementById('ai-fallback');
+  const status = document.getElementById('ai-status');
+  const reset = document.getElementById('ai-reset');
+  const toggle = document.getElementById('ai-toggle');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!canvas || !window.THREE) { fallback.style.display = 'grid'; status.textContent = 'WEBGL / FALLBACK'; return; }
+       const scene = new THREE.Scene();
+       const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+       camera.position.set(0, 0.5, 6.4);
+       const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+       renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+       const rootStyle = getComputedStyle(document.documentElement);
+       const color = (name, fallback) => rootStyle.getPropertyValue(name).trim() || fallback;
+       const accent = new THREE.Color(color('--accent', 'white'));
+       const signal = new THREE.Color(color('--signal', 'white'));
+       const border = new THREE.Color(color('--border', 'gray'));
+       renderer.setClearColor(0, 0);
+  const group = new THREE.Group();
+  scene.add(group);
+       const core = new THREE.Mesh(
+         new THREE.IcosahedronGeometry(1.08, 1),
+         new THREE.MeshBasicMaterial({color:accent, wireframe:true, transparent:true, opacity:.92})
+       );
+  group.add(core);
+       const inner = new THREE.Mesh(
+         new THREE.IcosahedronGeometry(.66, 1),
+         new THREE.MeshBasicMaterial({color:signal, wireframe:true, transparent:true, opacity:.5})
+       );
+       group.add(inner);
+       const ringMat = new THREE.MeshBasicMaterial({color:signal, wireframe:true, transparent:true, opacity:.68});
+       const ringA = new THREE.Mesh(new THREE.TorusGeometry(1.62,.012,8,96),ringMat);
+       const ringB = new THREE.Mesh(new THREE.TorusGeometry(1.95,.009,8,96),new THREE.MeshBasicMaterial({color:accent,wireframe:true,transparent:true,opacity:.48}));
+  ringA.rotation.x=.85; ringA.rotation.z=.18; ringB.rotation.x=-.72; ringB.rotation.y=.34;
+  group.add(ringA,ringB);
+  const points=[];
+  for(let i=0;i<180;i++){
+    const a=i*.61, r=1.35+(i%11)*.045;
+    points.push(Math.cos(a)*r, (i%17-8)*.045, Math.sin(a)*r);
+  }
+  const pointGeo=new THREE.BufferGeometry();
+  pointGeo.setAttribute('position',new THREE.Float32BufferAttribute(points,3));
+       const particles=new THREE.Points(pointGeo,new THREE.PointsMaterial({color:accent,size:.035,transparent:true,opacity:.72}));
+       group.add(particles);
+       const grid=new THREE.GridHelper(8,16,border,border);
+  grid.position.y=-1.55; grid.rotation.x=0;
+  scene.add(grid);
+  let running=!reduced, dragging=false, lastX=0, lastY=0, spin=0;
+  function resize(){const rect=canvas.getBoundingClientRect();const w=Math.max(rect.width,1),h=Math.max(rect.height,1);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+  function resetView(){group.rotation.set(0,0,0);camera.position.set(0,.5,6.4);camera.lookAt(0,0,0);spin=0;}
+  function render(){if(running){spin+=.003;group.rotation.y=spin;group.rotation.x=Math.sin(spin*.7)*.08;particles.rotation.z=-spin*.5;}renderer.render(scene,camera);requestAnimationFrame(render);}
+  new ResizeObserver(resize).observe(canvas); resize(); resetView(); render();
+  canvas.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId)});
+  canvas.addEventListener('pointermove',e=>{if(!dragging)return;group.rotation.y+=(e.clientX-lastX)*.008;group.rotation.x+=(e.clientY-lastY)*.008;lastX=e.clientX;lastY=e.clientY});
+  canvas.addEventListener('pointerup',()=>{dragging=false});
+  reset.addEventListener('click',resetView);
+  toggle.addEventListener('click',()=>{running=!running;toggle.textContent=running?'暂停旋转':'继续旋转';status.textContent=running?'WEBGL / RUNNING':'WEBGL / PAUSED'});
+  if(reduced){toggle.textContent='继续旋转';status.textContent='WEBGL / REDUCED MOTION';}
+})();
+</script>
+</body></html>
